@@ -17,20 +17,20 @@ class Size:
         self.byte_size = byte_size
         self.base = 1024
 
-    def __translate(self, value):
+    def __translation(self, value):
         return value / self.base
 
     def bytes(self):
         return self.byte_size
 
     def KB(self):
-        return self.__translate(self.byte_size)
+        return self.__translation(self.byte_size)
 
     def MB(self):
-        return self.__translate(self.KB())
+        return self.__translation(self.KB())
 
     def GB(self):
-        return self.__translate(self.MB())
+        return self.__translation(self.MB())
 
 
 def main():
