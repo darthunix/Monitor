@@ -3,7 +3,6 @@ import asyncio
 import argparse
 import logging
 import smtplib
-from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 
@@ -37,30 +36,21 @@ class Size:
         return self.__translation(self.mb())
 
 
-class Email:
-    def __init__(self, from_mail, to_mail):
+class Mail:
+    def __init__(self, from_mail, to_mail, mount_point, free_size):
         self.from_mail = from_mail
         self.to_mail = to_mail
+        self.subject = "Внимание! Заканчивается свободное место на разделе!"
+        self.text = "На разделе '{mount_point}' компьютера '{hostname}' заканчивается свободное место. " \
+                    "На текущий момент свободно {free_size} ГБ." \
+                    .format(mount_point=mount_point, hostname=os.uname().nodename, free_size=free_size)
 
-    def message(self, mount_point, free_size):
-        msg = MIMEMultipart()
-        msg['Subject'] = "Внимание! Заканчивается свободное место на разделе!"
+    def message(self):
+        msg = MIMEText(self.text, "plain")
+        msg['Subject'] = self.subject
         msg['From'] = self.from_mail
         msg['To'] = self.to_mail
-        text = EmailBody(mount_point, free_size).content()
-        msg.attach(MIMEText(text, 'plain'))
         return msg
-
-
-class EmailBody:
-    def __init__(self, mount_point, free_size):
-        self.mount_point = mount_point
-        self.free_size = free_size
-
-    def content(self):
-        return "На разделе '{mount_point}' компьютера '{hostname}' заканчивается свободное место. " \
-               "На текущий момент свободно {free_size} ГБ." \
-            .format(mount_point=self.mount_point, hostname=os.uname().nodename, free_size=self.free_size)
 
 
 if __name__ == "__main__":
@@ -89,29 +79,23 @@ if __name__ == "__main__":
     logging.basicConfig(filename=options.log_file, level=options.log_level,
                         format="%(levelname)-8s [%(asctime)s]  %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
-
     def monitoring(ioloop):
         mount_point = MountPoint(options.mount_point)
-        mount_point_free_size_gb = mount_point.free_size().gb()
-        if mount_point_free_size_gb < options.alarm_limit_gb:
-            email = Email(options.from_mail, options.to_mail)
+        if mount_point.free_size().gb() < options.alarm_limit_gb:
+            mail = Mail(options.from_mail, options.to_mail, mount_point.path, mount_point.free_size().gb())
             with smtplib.SMTP(options.smtp) as smtp:
                 try:
-                    smtp.sendmail(email.from_mail, email.to_mail,
-                                  email.message(options.mount_point, mount_point_free_size_gb).as_string())
+                    smtp.sendmail(mail.from_mail, mail.to_mail, mail.message().as_string())
                     logging.warning("Отправлено письмо на {to_mail} с содержанием: '{message}'"
-                                    .format(to_mail=email.to_mail,
-                                            message=EmailBody(mount_point.path,
-                                                              mount_point_free_size_gb).content()))
+                                    .format(to_mail=mail.to_mail, message=mail.text))
                 except Exception as err:
                     logging.error("Ошибка при отправке сообщения о заканчиваюемся свободном месте: {err}"
                                   .format(err=err))
 
         else:
             logging.debug("Все хорошо. На '{mount_point}' свободно еще {free_size} ГБ."
-                          .format(mount_point=mount_point.path, free_size=mount_point_free_size_gb))
+                          .format(mount_point=mount_point.path, free_size=mount_point.free_size().gb()))
         ioloop.call_later(options.sleep_interval, monitoring, ioloop)
-
 
     loop = asyncio.get_event_loop()
     try:
