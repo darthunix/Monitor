@@ -56,19 +56,19 @@ class Mail:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("mount_point", nargs="?", default="/", help="Точка монтирования, за которой следит скрипт")
-    parser.add_argument("sleep_interval", nargs="?", default=20, type=int,
+    parser.add_argument("--mount_point", nargs="?", default="/", help="Точка монтирования, за которой следит скрипт")
+    parser.add_argument("--sleep_interval", nargs="?", default=20, type=int,
                         help="Интервал опроса точки монтирования в секундах")
-    parser.add_argument("alarm_limit_gb", nargs="?", default=50, type=int,
+    parser.add_argument("--alarm_limit_gb", nargs="?", default=50, type=int,
                         help="Лимит свободного дискового пространства в ГБ, "
                              "при нехватки которого уведомляем ответственных лиц.")
-    parser.add_argument("from_mail", nargs="?", default="pacs@viveya.local",
+    parser.add_argument("--from_mail", nargs="?", default="pacs@viveya.local",
                         help="Почтовый адрес, с которого будут приходить предупреждения.")
-    parser.add_argument("to_mail", nargs="?", default="zabbix@viveya.khv.ru",
+    parser.add_argument("--to_mail", nargs="?", default="zabbix@viveya.khv.ru",
                         help="Почтовый адрес, на который будут приходить предупреждения.")
-    parser.add_argument("smtp", nargs="?", default="mail.viveya.khv.ru", help="Почтовый сервер SMTP.")
-    parser.add_argument("log_file", nargs="?", default="/tmp/monitor.log", help="Лог файл скрипта.")
-    parser.add_argument("log_level", nargs="?", default=logging.INFO, help="Уровень логирования скрипта.")
+    parser.add_argument("--smtp", nargs="?", default="mail.viveya.khv.ru", help="Почтовый сервер SMTP.")
+    parser.add_argument("--log_file", nargs="?", default="/tmp/monitor.log", help="Лог файл скрипта.")
+    parser.add_argument("--log_level", nargs="?", default=logging.INFO, help="Уровень логирования скрипта.")
     options = parser.parse_args()
 
     if not os.path.exists(options.mount_point):
