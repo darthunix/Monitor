@@ -69,7 +69,7 @@ if __name__ == "__main__":
                              "при нехватки которого уведомляем ответственных лиц.")
     parser.add_argument("from_mail", nargs="?", default="pacs@viveya.local",
                         help="Почтовый адрес, с которого будут приходить предупреждения.")
-    parser.add_argument("to_mail", nargs="?", default="smirnov1@viveya.khv.ru",
+    parser.add_argument("to_mail", nargs="?", default="zabbix@viveya.khv.ru",
                         help="Почтовый адрес, на который будут приходить предупреждения.")
     parser.add_argument("smtp", nargs="?", default="mail.viveya.khv.ru", help="Почтовый сервер SMTP.")
     parser.add_argument("log_file", nargs="?", default="/tmp/monitor.log", help="Лог файл скрипта.")
