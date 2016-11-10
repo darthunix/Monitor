@@ -42,20 +42,25 @@ class Email:
         self.from_mail = from_mail
         self.to_mail = to_mail
 
-    @staticmethod
-    def body(mount_point, free_size):
-        return "На разделе '{mount_point}' компьютера '{hostname}' заканчивается свободное место. " \
-               "На текущий момент свободно {free_size} ГБ." \
-            .format(mount_point=mount_point, hostname=os.uname().nodename, free_size=free_size)
-
     def message(self, mount_point, free_size):
         msg = MIMEMultipart()
         msg['Subject'] = "Внимание! Заканчивается свободное место на разделе!"
         msg['From'] = self.from_mail
         msg['To'] = self.to_mail
-        text = self.body(mount_point, free_size)
+        text = EmailBody(mount_point, free_size).content()
         msg.attach(MIMEText(text, 'plain'))
         return msg
+
+
+class EmailBody:
+    def __init__(self, mount_point, free_size):
+        self.mount_point = mount_point
+        self.free_size = free_size
+
+    def content(self):
+        return "На разделе '{mount_point}' компьютера '{hostname}' заканчивается свободное место. " \
+               "На текущий момент свободно {free_size} ГБ." \
+            .format(mount_point=self.mount_point, hostname=os.uname().nodename, free_size=self.free_size)
 
 
 if __name__ == "__main__":
@@ -95,7 +100,8 @@ if __name__ == "__main__":
                                   email.message(options.mount_point, mount_point.free_size().gb()).as_string())
                     logging.warning("Отправлено письмо на {to_mail} с содержанием: '{message}'"
                                     .format(to_mail=options.to_mail,
-                                            message=email.body(options.mount_point, mount_point.free_size().gb())))
+                                            message=EmailBody(options.mount_point,
+                                                              mount_point.free_size().gb()).content()))
                 except Exception as err:
                     logging.error("Ошибка при отправке сообщения о заканчиваюемся свободном месте: {err}"
                                   .format(err=err))
