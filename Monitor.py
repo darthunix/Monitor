@@ -69,7 +69,7 @@ if __name__ == "__main__":
                              "при нехватки которого уведомляем ответственных лиц.")
     parser.add_argument("from_mail", nargs="?", default="pacs@viveya.local",
                         help="Почтовый адрес, с которого будут приходить предупреждения.")
-    parser.add_argument("to_mail", nargs="?", default="smirnov@viveya.khv.ru",
+    parser.add_argument("to_mail", nargs="?", default="smirnov1@viveya.khv.ru",
                         help="Почтовый адрес, на который будут приходить предупреждения.")
     parser.add_argument("smtp", nargs="?", default="mail.viveya.khv.ru", help="Почтовый сервер SMTP.")
     parser.add_argument("log_file", nargs="?", default="/tmp/monitor.log", help="Лог файл скрипта.")
@@ -90,15 +90,21 @@ if __name__ == "__main__":
         if mount_point.free_size().gb() < options.alarm_limit_gb:
             email = Email(options.from_mail, options.to_mail)
             with smtplib.SMTP(options.smtp) as smtp:
-                smtp.sendmail(email.from_mail, email.to_mail,
-                              email.message(options.mount_point, mount_point.free_size().gb()).as_string())
-            logging.warning("Отправлено письмо на {to_mail} с содержанием: '{message}'"
-                            .format(to_mail=options.to_mail,
-                                    message=email.body(options.mount_point, mount_point.free_size().gb())))
+                try:
+                    smtp.sendmail(email.from_mail, email.to_mail,
+                                  email.message(options.mount_point, mount_point.free_size().gb()).as_string())
+                    logging.warning("Отправлено письмо на {to_mail} с содержанием: '{message}'"
+                                    .format(to_mail=options.to_mail,
+                                            message=email.body(options.mount_point, mount_point.free_size().gb())))
+                except Exception as err:
+                    logging.error("Ошибка при отправке сообщения о заканчиваюемся свободном месте: {err}"
+                                  .format(err=err))
+
         else:
             logging.debug("Все хорошо. На '{mount_point}' свободно еще {free_size} ГБ."
-                         .format(mount_point=options.mount_point, free_size=options.free_size))
+                          .format(mount_point=options.mount_point, free_size=options.free_size))
         ioloop.call_later(options.sleep_interval, monitoring, ioloop)
+
 
     loop = asyncio.get_event_loop()
     try:
