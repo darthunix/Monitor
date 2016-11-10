@@ -1,6 +1,6 @@
 import os
 import asyncio
-from tornado.options import define, options, parse_command_line
+import argparse
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -46,22 +46,28 @@ class Email:
         msg['Subject'] = "Внимание! Заканчивается свободное место на разделе!"
         msg['From'] = self.from_mail
         msg['To'] = self.to_mail
-        text = "На разделе {mount_point} компьютера {hostname} заканчивается свободное место. " \
-               "На текущий момент осталось {free_size} ГБ свободных." \
+        text = "На разделе '{mount_point}' компьютера '{hostname}' заканчивается свободное место. " \
+               "На текущий момент свободно {free_size} ГБ." \
             .format(mount_point=mount_point, hostname=os.uname().nodename, free_size=free_size)
         msg.attach(MIMEText(text, 'plain'))
         return msg
 
 
-def main():
-    define("mount_point", default="/", help="Точка монтирования, за которой следит скрипт")
-    define("sleep_interval", default=20, help="Интервал опроса точки монтирования в секундах")
-    define("alarm_limit_gb", default=50,
-           help="Лимит свободного дискового пространства в ГБ, при нехватки которого уведомляем ответственных лиц.")
-    define("from_mail", default="pacs@viveya.local", help="Почтовый адрес, с которого будут приходить предупреждения.")
-    define("to_mail", default="smirnov@viveya.khv.ru", help="Почтовый адрес, на который будут приходить предупреждения")
-    define("smtp", default="mail.viveya.khv.ru", help="Почтовый сервер SMTP.")
-    parse_command_line()
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mount_point", nargs="?", default="/", help="Точка монтирования, за которой следит скрипт")
+    parser.add_argument("sleep_interval", nargs="?", default=20, type=int,
+                        help="Интервал опроса точки монтирования в секундах")
+    parser.add_argument("alarm_limit_gb", nargs="?", default=50, type=int,
+                        help="Лимит свободного дискового пространства в ГБ, "
+                             "при нехватки которого уведомляем ответственных лиц.")
+    parser.add_argument("from_mail", nargs="?", default="pacs@viveya.local",
+                        help="Почтовый адрес, с которого будут приходить предупреждения.")
+    parser.add_argument("to_mail", nargs="?", default="smirnov@viveya.khv.ru",
+                        help="Почтовый адрес, на который будут приходить предупреждения.")
+    parser.add_argument("smtp", nargs="?", default="mail.viveya.khv.ru", help="Почтовый сервер SMTP.")
+    options = parser.parse_args()
 
     if not os.path.exists(options.mount_point):
         raise Exception("Данная точка монтирования не существует!")
@@ -81,7 +87,3 @@ def main():
         loop.run_forever()
     finally:
         loop.close()
-
-
-if __name__ == "__main__":
-    main()
