@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 
 
 class MountPoint:
+
     def __init__(self, path):
         self.path = path
 
@@ -16,6 +17,7 @@ class MountPoint:
 
 
 class Size:
+
     def __init__(self, byte_size):
         self.byte_size = byte_size
         self.base = 1024
@@ -26,17 +28,18 @@ class Size:
     def bytes(self):
         return self.byte_size
 
-    def KB(self):
+    def kb(self):
         return self.__translation(self.byte_size)
 
-    def MB(self):
-        return self.__translation(self.KB())
+    def mb(self):
+        return self.__translation(self.kb())
 
-    def GB(self):
-        return self.__translation(self.MB())
+    def gb(self):
+        return self.__translation(self.mb())
 
 
 class Email:
+
     def __init__(self, from_mail, to_mail):
         self.from_mail = from_mail
         self.to_mail = to_mail
@@ -72,14 +75,14 @@ if __name__ == "__main__":
     if not os.path.exists(options.mount_point):
         raise Exception("Данная точка монтирования не существует!")
 
-    def monitoring(loop):
+    def monitoring(ioloop):
         mount_point = MountPoint(options.mount_point)
-        if mount_point.free_size().GB() < options.alarm_limit_gb:
+        if mount_point.free_size().gb() < options.alarm_limit_gb:
             email = Email(options.from_mail, options.to_mail)
             with smtplib.SMTP(options.smtp) as smtp:
                 smtp.sendmail(email.from_mail, email.to_mail,
-                              email.message(options.mount_point, mount_point.free_size().GB()).as_string())
-        loop.call_later(options.sleep_interval, monitoring, loop)
+                              email.message(options.mount_point, mount_point.free_size().gb()).as_string())
+        ioloop.call_later(options.sleep_interval, monitoring, ioloop)
 
     loop = asyncio.get_event_loop()
     try:
