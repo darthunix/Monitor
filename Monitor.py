@@ -82,12 +82,12 @@ if __name__ == "__main__":
     def monitoring(ioloop):
         mount_point = MountPoint(options.mount_point)
         if mount_point.free_size().gb() < options.alarm_limit_gb:
-            mail = Mail(options.from_mail, options.to_mail, mount_point.path, mount_point.free_size().gb())
             with smtplib.SMTP(options.smtp) as smtp:
                 try:
+                    mail = Mail(options.from_mail, options.to_mail, mount_point.path, mount_point.free_size().gb())
                     smtp.sendmail(mail.from_mail, mail.to_mail, mail.message().as_string())
-                    logging.warning("Отправлено письмо на {to_mail} с содержанием: '{message}'"
-                                    .format(to_mail=mail.to_mail, message=mail.text))
+                    logging.warning("Отправлено письмо на {to_mail} с содержанием: '{text}'"
+                                    .format(to_mail=mail.to_mail, text=mail.text))
                 except Exception as err:
                     logging.error("Ошибка при отправке сообщения о заканчиваюемся свободном месте: {err}"
                                   .format(err=err))
