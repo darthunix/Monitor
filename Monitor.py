@@ -2,6 +2,7 @@ import os
 import asyncio
 import argparse
 import logging
+from logging import DEBUG, INFO, WARNING, ERROR
 import smtplib
 from email.mime.text import MIMEText
 
@@ -56,19 +57,22 @@ class Mail:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mount_point", nargs="?", default="/", help="Точка монтирования, за которой следит скрипт")
-    parser.add_argument("--sleep_interval", nargs="?", default=20, type=int,
+    parser.add_argument("-m", "--mount_point", nargs="?", default="/",
+                        help="Точка монтирования, за которой следит скрипт")
+    parser.add_argument("-i", "--sleep_interval", nargs="?", default=60, type=int,
                         help="Интервал опроса точки монтирования в секундах")
-    parser.add_argument("--alarm_limit_gb", nargs="?", default=50, type=int,
+    parser.add_argument("-a", "--alarm_limit_gb", nargs="?", default=50, type=int,
                         help="Лимит свободного дискового пространства в ГБ, "
-                             "при нехватки которого уведомляем ответственных лиц.")
-    parser.add_argument("--from_mail", nargs="?", default="pacs@viveya.local",
-                        help="Почтовый адрес, с которого будут приходить предупреждения.")
-    parser.add_argument("--to_mail", nargs="?", default="zabbix@viveya.khv.ru",
-                        help="Почтовый адрес, на который будут приходить предупреждения.")
-    parser.add_argument("--smtp", nargs="?", default="mail.viveya.khv.ru", help="Почтовый сервер SMTP.")
-    parser.add_argument("--log_file", nargs="?", default="/tmp/monitor.log", help="Лог файл скрипта.")
-    parser.add_argument("--log_level", nargs="?", default=logging.INFO, help="Уровень логирования скрипта.")
+                             "при нехватки которого уведомляем ответственных лиц")
+    parser.add_argument("-f", "--from_mail", nargs="?", default="pacs@viveya.local",
+                        help="Почтовый адрес, с которого будут приходить предупреждения")
+    parser.add_argument("-t", "--to_mail", nargs="?", default="zabbix@viveya.khv.ru",
+                        help="Почтовый адрес, на который будут приходить предупреждения")
+    parser.add_argument("-s", "--smtp", nargs="?", default="mail.viveya.khv.ru", help="Адрес почтового сервера SMTP")
+    parser.add_argument("-o", "--log_file", nargs="?", default="/tmp/monitor.log", metavar='OUTPUT_LOG_FILE',
+                        help="Расположение лог файл скрипта")
+    parser.add_argument("-l", "--log_level", nargs="?", default=INFO, choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+                        help="Уровень логирования скрипта")
     options = parser.parse_args()
 
     if not os.path.exists(options.mount_point):
