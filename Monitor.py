@@ -5,6 +5,7 @@ import logging
 from logging import DEBUG, INFO, WARNING, ERROR
 import smtplib
 from email.mime.text import MIMEText
+import configparser
 
 
 class MountPoint:
@@ -54,57 +55,64 @@ class Mail:
         return msg
 
 
+class Monitor:
+    def __init__(self, settings):
+        self.mount_point = settings["mount_point"]
+        self.sleep_interval = int(settings["sleep_interval"])
+        self.alarm_limit_gb = int(settings["alarm_limit_gb"])
+        self.from_mail = settings["from_mail"]
+        self.to_mail = settings["to_mail"]
+        self.smtp = settings["smtp"]
+        self.log_file = settings["log_file"]
+        self.log_level = settings["log_level"]
+
+    def run(self):
+        if not os.path.exists(self.mount_point):
+            message = "Данная точка монтирования не существует!"
+            logging.error(message)
+            raise Exception(message)
+
+        logging.basicConfig(filename=self.log_file, level=self.log_level,
+                            format="%(levelname)-8s [%(asctime)s]  %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
+        def monitoring(ioloop):
+            mount_point = MountPoint(self.mount_point)
+            if mount_point.free_size().gb() < self.alarm_limit_gb:
+                with smtplib.SMTP(self.smtp) as smtp:
+                    try:
+                        mail = Mail(self.from_mail, self.to_mail, mount_point.path, mount_point.free_size().gb())
+                        smtp.sendmail(mail.from_mail, mail.to_mail, mail.message().as_string())
+                        logging.warning("Отправлено письмо на {to_mail} с содержанием: '{text}'"
+                                        .format(to_mail=mail.to_mail, text=mail.text))
+                    except Exception as err:
+                        logging.error("Ошибка при отправке сообщения о заканчиваюемся свободном месте: {err}"
+                                      .format(err=err))
+
+            else:
+                logging.debug("Все хорошо. На '{mount_point}' свободно еще {free_size} ГБ."
+                              .format(mount_point=mount_point.path, free_size=mount_point.free_size().gb()))
+            ioloop.call_later(self.sleep_interval, monitoring, ioloop)
+
+        loop = asyncio.get_event_loop()
+        try:
+            loop.call_soon(monitoring, loop)
+            loop.run_forever()
+        finally:
+            loop.close()
+            logging.info("Программа завершена")
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--mount_point", nargs="?", default="/",
-                        help="Точка монтирования, за которой следит скрипт")
-    parser.add_argument("-i", "--sleep_interval", nargs="?", default=60, type=int,
-                        help="Интервал опроса точки монтирования в секундах")
-    parser.add_argument("-a", "--alarm_limit_gb", nargs="?", default=50, type=int,
-                        help="Лимит свободного дискового пространства в ГБ, "
-                             "при нехватки которого уведомляем ответственных лиц")
-    parser.add_argument("-f", "--from_mail", nargs="?", default="pacs@viveya.local",
-                        help="Почтовый адрес, с которого будут приходить предупреждения")
-    parser.add_argument("-t", "--to_mail", nargs="?", default="zabbix@viveya.khv.ru",
-                        help="Почтовый адрес, на который будут приходить предупреждения")
-    parser.add_argument("-s", "--smtp", nargs="?", default="mail.viveya.khv.ru", help="Адрес почтового сервера SMTP")
-    parser.add_argument("-o", "--log_file", nargs="?", default="/tmp/monitor.log", metavar='OUTPUT_LOG_FILE',
-                        help="Расположение лог файл скрипта")
-    parser.add_argument("-l", "--log_level", nargs="?", default=INFO, choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-                        help="Уровень логирования скрипта")
+    parser.add_argument("-f", "--conf_file", nargs="?", default="monitor.conf", help="Файл с настройками")
     options = parser.parse_args()
 
-    if not os.path.exists(options.mount_point):
-        error_message = "Данная точка монтирования не существует!"
-        logging.error(error_message)
-        raise Exception(error_message)
+    conf_file = configparser.ConfigParser()
+    conf_file.read(options.conf_file)
+    config = {}
+    for section in conf_file.sections():
+        config = {**config, **{key: conf_file[section][key] for key in conf_file[section]}}
 
-    logging.basicConfig(filename=options.log_file, level=options.log_level,
-                        format="%(levelname)-8s [%(asctime)s]  %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
-
-    def monitoring(ioloop):
-        mount_point = MountPoint(options.mount_point)
-        if mount_point.free_size().gb() < options.alarm_limit_gb:
-            with smtplib.SMTP(options.smtp) as smtp:
-                try:
-                    mail = Mail(options.from_mail, options.to_mail, mount_point.path, mount_point.free_size().gb())
-                    smtp.sendmail(mail.from_mail, mail.to_mail, mail.message().as_string())
-                    logging.warning("Отправлено письмо на {to_mail} с содержанием: '{text}'"
-                                    .format(to_mail=mail.to_mail, text=mail.text))
-                except Exception as err:
-                    logging.error("Ошибка при отправке сообщения о заканчиваюемся свободном месте: {err}"
-                                  .format(err=err))
-
-        else:
-            logging.debug("Все хорошо. На '{mount_point}' свободно еще {free_size} ГБ."
-                          .format(mount_point=mount_point.path, free_size=mount_point.free_size().gb()))
-        ioloop.call_later(options.sleep_interval, monitoring, ioloop)
-
-    loop = asyncio.get_event_loop()
-    try:
-        loop.call_soon(monitoring, loop)
-        loop.run_forever()
-    finally:
-        loop.close()
-        logging.info("Программа завершена")
+    monitor = Monitor(config)
+    monitor.run()
