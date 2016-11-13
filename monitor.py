@@ -105,7 +105,11 @@ class Monitor:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--conf_file", nargs="?", default="monitor.conf", help="Файл с настройками")
+    parser.add_argument("-c", "--conf_file", nargs="?", default="monitor.conf", help="Файл с настройками")
+    parser.add_argument("-o", "--log_file", nargs="?", default="monitor.log", metavar='OUTPUT_LOG_FILE',
+                        help="Расположение лог файл скрипта")
+    parser.add_argument("-l", "--log_level", nargs="?", default=INFO, choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+                        help="Уровень логирования скрипта")
     options = parser.parse_args()
 
     conf_file = configparser.ConfigParser()
@@ -113,6 +117,7 @@ if __name__ == "__main__":
     config = {}
     for section in conf_file.sections():
         config = {**config, **{key: conf_file[section][key] for key in conf_file[section]}}
+    config = {**options.__dict__, **config}
 
     monitor = Monitor(config)
     monitor.run()
